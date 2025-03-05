@@ -1,72 +1,36 @@
 # Global options
 {
-	admin off # There's no need for the admin API in Railway's environment
-	persist_config off # Storage isn't persistent anyway
-	auto_https off # Railway handles HTTPS for us, this would cause issues if left enabled
+    admin off
+    persist_config off
+    auto_https off
 
-	# Runtime logs
-	log {
-		output stdout
-		format console
-		level DEBUG # Menampilkan log lebih detail untuk debugging
-	}
+    log {
+        format json
+    }
 
-	# Server options
-	servers {
-		trusted_proxies static private_ranges # Trust Railway's proxy
-	}
+    servers {
+        trusted_proxies static private_ranges
+    }
 }
 
-# Site block, listens on the $PORT environment variable, automatically assigned by Railway
+# Serve Angular build output on Railway
 :{$PORT} {
-	# Access logs
-	log {
-		output stdout
-		format console
-		level DEBUG # Menampilkan log lebih detail untuk debugging
-	}
+    log {
+        format json
+    }
 
-	# Health check for Railway
-	rewrite /health /*
+    # Health check untuk Railway
+    rewrite /health /*
 
-	# Tambahkan log untuk menampilkan path yang digunakan sebagai root
-	@debug {
-		path /*
-	}
-	handle @debug {
-		log {
-			output stdout
-			format console
-			level INFO
-		}
-		header {
-			X-Root-Path "{$ANGULAR_OUTPUT_PATH}"
-		}
-	}
+    # Arahkan ke folder output Angular
+    root * {$ANGULAR_OUTPUT_PATH}
 
-	# Periksa apakah output path valid
-	root * {$ANGULAR_OUTPUT_PATH}
+    # Aktifkan gzip untuk mempercepat loading
+    encode gzip
 
-	# Enable gzipping responses
-	encode gzip
+    # Serve file statis dari Angular build
+    file_server
 
-	# Serve files
-	file_server
-
-	# Jika path tidak ditemukan, tampilkan log error
-	@notfound {
-		file {
-			try_files {path} /index.html
-		}
-	}
-	handle @notfound {
-		log {
-			output stdout
-			format console
-			level ERROR
-		}
-		header {
-			X-File-Not-Found "{path}"
-		}
-	}
+    # Redirect semua request ke index.html untuk client-side routing
+    try_files {path} /index.html
 }

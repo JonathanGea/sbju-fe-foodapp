@@ -1,41 +1,30 @@
 # https://nixpacks.com/docs/configuration/file
 
-# Set up some variables to minimize annoyance
+# Setup environment variables
 [variables]
-    NPM_CONFIG_UPDATE_NOTIFIER = 'false' # The update notification is relatively useless in a production environment
-    NPM_CONFIG_FUND = 'false' # The fund notification is also pretty useless in a production environment
+    NPM_CONFIG_UPDATE_NOTIFIER = "false"
+    NPM_CONFIG_FUND = "false"
+    NODE_OPTIONS = "--max-old-space-size=512"  # Batasi penggunaan memori Node.js
 
-# Setup phase where we add any needed packages
+# Install packages yang dibutuhkan
 [phases.setup]
-    nixPkgs = ['...', 'jq'] # jq is needed to parse the outputPath from our angular.json file
-    cmds = [
-        'echo "[SETUP] Installing required packages..."'
-    ]
+    nixPkgs = ["...", "jq"]  # jq untuk membaca outputPath dari angular.json
 
-# Download Caddy from Nix
+# Install Caddy dari Nix
 [phases.caddy]
-    dependsOn = ['setup'] # Ensure this phase runs after the default 'setup' phase
-    nixpkgsArchive = 'ba913eda2df8eb72147259189d55932012df6301' # Caddy v2.8.4 - commit reference
-    nixPkgs = ['caddy'] # Install Caddy as a Nix package
-    cmds = [
-        'echo "[CADDY] Caddy installation complete."'
-    ]
+    dependsOn = ["setup"]
+    nixpkgsArchive = "ba913eda2df8eb72147259189d55932012df6301"  # Caddy v2.8.4
+    nixPkgs = ["caddy"]
 
-# Format the Caddyfile with fmt
+# Format Caddyfile agar rapi
 [phases.fmt]
-    dependsOn = ['caddy'] # Ensure this phase runs after the 'caddy' phase
-    cmds = [
-        'echo "[FMT] Formatting Caddyfile..."',
-        'caddy fmt --overwrite Caddyfile',
-        'echo "[FMT] Caddyfile formatting complete."'
-    ]
+    dependsOn = ["caddy"]
+    cmds = ["caddy fmt --overwrite Caddyfile"]
 
-# Compute the output path and start the Caddy web server
+# Build Angular dan jalankan Caddy sebagai server
 [start]
-    cmds = [
-        'echo "[START] Extracting Angular output path from angular.json..."',
-        'export ANGULAR_OUTPUT_PATH=$(jq -r "[.projects[] | .architect.build.options.outputPath][0]" angular.json)',
-        'echo "[START] ANGULAR_OUTPUT_PATH set to: $ANGULAR_OUTPUT_PATH"',
-        'echo "[START] Starting Caddy server..."',
-        'exec caddy run --config Caddyfile --adapter caddyfile 2>&1'
-    ]
+    cmd = '''
+        export ANGULAR_OUTPUT_PATH=$(jq -r "[.projects[] | .architect.build.options.outputPath][0]" angular.json) &&
+        ng build --configuration=production &&
+        exec caddy run --config Caddyfile --adapter caddyfile 2>&1
+    '''
