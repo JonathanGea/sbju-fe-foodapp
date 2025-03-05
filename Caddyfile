@@ -1,37 +1,72 @@
-# global options
+# Global options
 {
-	admin off # theres no need for the admin api in railway's environment
-	persist_config off # storage isn't persistent anyway
-	auto_https off # railway handles https for us, this would cause issues if left enabled
-	# runtime logs
+	admin off # There's no need for the admin API in Railway's environment
+	persist_config off # Storage isn't persistent anyway
+	auto_https off # Railway handles HTTPS for us, this would cause issues if left enabled
+
+	# Runtime logs
 	log {
-		format json # set runtime log format to json mode 
+		output stdout
+		format console
+		level DEBUG # Menampilkan log lebih detail untuk debugging
 	}
-	# server options
+
+	# Server options
 	servers {
-		trusted_proxies static private_ranges # trust railway's proxy
+		trusted_proxies static private_ranges # Trust Railway's proxy
 	}
 }
 
-# site block, listens on the $PORT environment variable, automatically assigned by railway
+# Site block, listens on the $PORT environment variable, automatically assigned by Railway
 :{$PORT} {
-	# access logs
+	# Access logs
 	log {
-		format json # set access log format to json mode
+		output stdout
+		format console
+		level DEBUG # Menampilkan log lebih detail untuk debugging
 	}
 
-	# health check for railway
+	# Health check for Railway
 	rewrite /health /*
 
-	# serve from the set folder
-	root * {$ANGULAR_OUTPUT_PATH}/browser
+	# Tambahkan log untuk menampilkan path yang digunakan sebagai root
+	@debug {
+		path /*
+	}
+	handle @debug {
+		log {
+			output stdout
+			format console
+			level INFO
+		}
+		header {
+			X-Root-Path "{$ANGULAR_OUTPUT_PATH}"
+		}
+	}
 
-	# enable gzipping responses
+	# Periksa apakah output path valid
+	root * {$ANGULAR_OUTPUT_PATH}
+
+	# Enable gzipping responses
 	encode gzip
 
-	# serve files
+	# Serve files
 	file_server
 
-	# if path doesn't exist, redirect it to 'index.html' for client side routing
-	try_files {path} /index.html
+	# Jika path tidak ditemukan, tampilkan log error
+	@notfound {
+		file {
+			try_files {path} /index.html
+		}
+	}
+	handle @notfound {
+		log {
+			output stdout
+			format console
+			level ERROR
+		}
+		header {
+			X-File-Not-Found "{path}"
+		}
+	}
 }
