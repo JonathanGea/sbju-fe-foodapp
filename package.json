@@ -3,11 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node --max_old_space_size=8192 ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "serve:ssr:fe-foodapp": "node dist/fe-foodapp/server/server.mj"
+    "test": "ng test"
   },
   "private": true,
   "dependencies": {
